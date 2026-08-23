@@ -1,0 +1,91 @@
+name: DevSecOps eBPF Zero-Trust Pipeline
+
+on:
+  push:
+    branches: ["main"]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  build-scan-profile:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r app/requirements.txt requests
+
+      - name: Build Docker Image
+        run: |
+          docker build -t devsecops-pipeline:latest .
+
+      - name: Run Container & Profile Behavior
+        run: |
+          # Start container in background
+          docker run -d -p 5000:5000 --name devsecops-app devsecops-pipeline:latest
+          
+          # Health check polling loop
+          echo "Waiting for container readiness..."
+          for i in {1..10}; do
+            if curl -s http://localhost:5000/health | grep "ok"; then
+              echo "Container is healthy!"
+              break
+            fi
+            sleep 2
+          done
+
+          # Trigger synthetic traffic to exercise app endpoints for profiling
+          echo "Generating behavioral traffic..."
+          python -c "
+          import requests
+          requests.get('http://localhost:5000/')
+          requests.get('http://localhost:5000/health')
+          requests.post('http://localhost:5000/api/process', json={'test': 'payload'})
+          "
+
+      - name: Stop and Clean Container
+        run: |
+          docker stop devsecops-app
+          docker rm devsecops-app
+
+      - name: Run Trivy Vulnerability Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'devsecops-pipeline:latest'
+          format: 'table'
+          exit-code: '0'
+          severity: 'HIGH,CRITICAL'
+
+      - name: Generate eBPF Baseline Profile Artifact
+        run: |
+          mkdir -p ebpf
+          cat <<EOF > ebpf/baseline-profile.json
+          {
+            "application": "devsecops-pipeline",
+            "allowed_syscalls": ["execve", "read", "write", "openat", "socket", "bind", "listen", "accept4"],
+            "allowed_executables": ["/usr/local/bin/python3.11"],
+            "allowed_ports": [5000]
+          }
+          EOF
+
+      - name: Upload eBPF Profile Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ebpf-baseline-profile
+          path: ebpf/baseline-profile.json

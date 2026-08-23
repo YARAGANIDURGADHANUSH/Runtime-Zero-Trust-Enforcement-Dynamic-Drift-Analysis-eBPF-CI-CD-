@@ -1,0 +1,26 @@
+{
+  "metadata": {
+    "application": "devsecops-pipeline",
+    "environment": "ci-generated-profile",
+    "strict_mode": true
+  },
+  "least_privilege_baseline": {
+    "allowed_syscalls": [
+      "accept4",
+      "bind",
+      "close",
+      "execve",
+      "listen",
+      "openat",
+      "read",
+      "socket",
+      "write"
+    ],
+    "allowed_executables": [
+      "/usr/local/bin/python3.11"
+    ],
+    "allowed_ports": [
+      5000
+    ]
+  }
+}

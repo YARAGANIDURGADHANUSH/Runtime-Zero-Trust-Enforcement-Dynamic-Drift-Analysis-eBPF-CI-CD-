@@ -1,0 +1,39 @@
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: devsecops-runtime-zero-trust
+  namespace: kube-system
+spec:
+  kprobes:
+    # Rule 1: Restrict Process Execution (Block unauthorized binaries like /bin/sh or /bin/bash)
+    - call: "sys_execve"
+      syscall: true
+      args:
+        - index: 0
+          type: "string"
+      selectors:
+        - matchArgs:
+            - index: 0
+              operator: "NotIn"
+              values:
+                - "/usr/local/bin/python3.11"
+                - "/usr/local/bin/python"
+          matchActions:
+            - action: Sigkill  # Instantly terminate process if binary is not whitelisted
+
+    # Rule 2: Restrict Sensitive File Access (Prevent reading sensitive path credentials)
+    - call: "sys_openat"
+      syscall: true
+      args:
+        - index: 1
+          type: "string"
+      selectors:
+        - matchArgs:
+            - index: 1
+              operator: "Prefix"
+              values:
+                - "/etc/shadow"
+                - "/etc/passwd"
+                - "/root/.aws/"
+          matchActions:
+            - action: Sigkill

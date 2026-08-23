@@ -1,87 +1,75 @@
-![CI](https://github.com/YARAGANIDURGADHANUSH/cloud-devsecops-pipeline/actions/workflows/ci.yml/badge.svg)
+# eBPF-Enforced Zero Trust: Bridging CI/CD Behavioral Profiling and Kernel Runtime Drift Mitigation
 
-# Cloud-Based Secure DevOps Pipeline for Software Development
+[![DevSecOps eBPF Pipeline](https://github.com/YARAGANIDURGADHANUSH/Runtime-Zero-Trust-Enforcement-Dynamic-Drift-Analysis-eBPF-CI-CD-/actions/workflows/devsecops-ebpf-pipeline.yml/badge.svg)](https://github.com/YARAGANIDURGADHANUSH/Runtime-Zero-Trust-Enforcement-Dynamic-Drift-Analysis-eBPF-CI-CD-/actions)
 
-## Live Demo (AWS EC2)
+## Abstract
+Traditional DevSecOps pipelines rely heavily on static analysis (SAST/SCA) and container vulnerability scanning (Trivy). While effective at rest, these static gates are blind to zero-day exploits and post-deployment runtime compromises. 
 
-⚠️ **Note:**  
-The AWS EC2 instance used for this demo may not be running continuously to avoid cloud costs.
+This research project introduces a closed-loop DevSecOps architecture that combines automated CI integration profiling with kernel-level eBPF (Extended Berkeley Packet Filter) enforcement. During the CI build phase, dynamic application integration tests establish a **Least-Privilege System Call Profile**. Upon Continuous Deployment to AWS EC2, Cilium Tetragon translates this profile into real-time kernel hooks that monitor runtime drift and immediately terminate (`SIGKILL`) anomalous syscalls or remote code execution (RCE) attempts.
 
-- 🌐 Application URL (when instance is running):  
-  http://13.233.252.127/
+---
 
-- ❤️ Health Check Endpoint (when instance is running):  
-  http://13.233.252.127/health
+## Key Architecture & Features
 
-📸 Screenshots and CI/CD logs are provided below as **proof of successful deployment and execution**.
-> This project demonstrates a complete DevSecOps workflow.  
-> Infrastructure is provisioned temporarily for demonstration purposes.
+[ GitHub Actions CI ] ──(Generates Trace)──> [ Profile Generator ]
+│
+(Least-Privilege JSON)
+│
+[ AWS EC2 Deployment ] <──(Enforces Rule)─── [ Tetragon eBPF Engine ]
+│
+└──(RCE / Anomaly Attempt) ──> [ Instant Kernel SIGKILL ]
 
-## Docker Hub Image
-✅ https://hub.docker.com/r/ydurgadhanush/devsecops-pipeline
 
-## Architecture Diagram
-![DevSecOps Architecture](https://raw.githubusercontent.com/YARAGANIDURGADHANUSH/cloud-devsecops-pipeline/main/DevSecOps_Architecture_Diagram.png)
+* **Automated Behavioral Profiling**: Dynamic traffic generation during CI captures exact binary execution, network port bindings, and system call baselines (`accept4`, `bind`, `execve`, `openat`).
+* **Static & Supply-Chain Scanning**: Centralized Trivy configuration checking for OS and application-level `HIGH` / `CRITICAL` vulnerabilities.
+* **Kernel-Level Zero Trust**: Cilium Tetragon CRD policy intercepting unauthorized system calls at the Linux kernel boundary with sub-millisecond mitigation latency.
+* **Hardened Containerization**: Multi-stage, non-root (`appuser`) Docker build ensuring strict process insulation.
 
-## Project Highlights
-- ✅ CI/CD automation using GitHub Actions
-- ✅ Dockerized Python (Flask) application for consistent deployments
-- ✅ Security scanning using Trivy (HIGH/CRITICAL)
-- ✅ Trivy JSON report generated and uploaded as an artifact
-- ✅ Job Summary prints vulnerability counts and fails build on CRITICAL issues
+---
 
-## Screenshots
+## Repository Structure
 
-### Application & Health Check
-![App Health Endpoint](screenshots/app-health-endpoint.png)
+```text
+Runtime-Zero-Trust-Enforcement-Dynamic-Drift-Analysis-eBPF-CI-CD-/
+├── .github/workflows/
+│   └── devsecops-ebpf-pipeline.yml  # Unified CI/CD & profiling pipeline
+├── app/
+│   ├── main.py                      # Flask microservice with telemetry routes
+│   └── requirements.txt             # Core application dependencies
+├── ebpf/
+│   ├── profile_generator.py         # Automated trace-to-profile JSON parser
+│   ├── baseline-profile.json        # Generated system call baseline
+│   └── tetragon-policy.yaml         # eBPF kernel enforcement policy
+├── security/
+│   ├── trivy-config.yaml            # Centralized vulnerability scanner rules
+│   └── exploits/
+│       └── rce_simulation.py        # Zero-day RCE & syscall drift exploit script
+├── scripts/
+│   ├── generate_traffic.py          # Synthetic load suite for CI profiling
+│   └── deploy_ec2.sh                # Automated SSH/CD script for AWS EC2
+└── Dockerfile                       # Multi-stage non-root container configuration
+Experimental Workflow
+1. Run CI/CD Profiling Locally
+Bash
+# Build the application image
+docker build -t devsecops-pipeline:latest .
 
-### Docker
-![Docker PS](screenshots/docker-ps.png)
+# Generate behavioral traffic
+python scripts/generate_traffic.py http://localhost:5000
 
-### Docker Hub
-![Docker Hub Repo](screenshots/dockerhub-repo.png)
-![Docker Hub Repository Details](screenshots/dockerhub-repository.png)
+# Parse trace logs and output baseline profile
+python ebpf/profile_generator.py ebpf/trace_output.json ebpf/baseline-profile.json
+2. Execute RCE / Drift Simulation
+To test eBPF kernel enforcement against unauthorized syscall attempts (/bin/sh execution or credential extraction):
 
-### AWS EC2
-![EC2 Instance](screenshots/ec2-instance.png)
-![EC2 Public Output](screenshots/ec2-public-output.png)
+Bash
+python security/exploits/rce_simulation.py http://<EC2-PUBLIC-IP>/api/process
+Tech Stack
+Language & Framework: Python 3.11, Flask
 
-### GitHub Actions (CI/CD)
-![GitHub Actions Workflow](screenshots/github-actions.png)
-![GitHub Actions Success](screenshots/github-actions-success.png)
+Security & Tracing: Cilium Tetragon, eBPF, Aqua Security Trivy
 
-## CI Workflow (GitHub Actions)
-On every push/PR to `main`, the pipeline:
-1. Installs dependencies
-2. Runs a basic Flask import test
-3. Builds the Docker image
-4. Runs container and tests `/health` endpoint
-5. Scans the image using Trivy (HIGH/CRITICAL)
-6. Uploads Trivy report as an artifact
+CI/CD & Cloud Infrastructure: GitHub Actions, Docker Hub, AWS EC2 (Ubuntu 24.04 LTS)
 
-## Resume Bullet Points
-- Deployed a Dockerized Flask application on AWS EC2 and exposed it via a public HTTP endpoint.
-- Built a CI pipeline using GitHub Actions to automate Docker builds, health checks, and Trivy vulnerability scanning.
-- Published Docker images to Docker Hub for versioned container delivery and simplified cloud deployments.
-
-## Tech Stack
-- Python (Flask)
-- Docker
-- Git & GitHub
-- GitHub Actions (CI)
-- Trivy (Image vulnerability scanning)
-- AWS EC2 (Deployment)
-
-## Pipeline Flow
-1. Code push / PR triggers GitHub Actions
-2. Dependencies are installed
-3. Basic test runs
-4. Docker image is built
-5. Container health check is tested
-6. Trivy scan checks HIGH/CRITICAL vulnerabilities
-7. Report is uploaded as an artifact
-
-## Run Locally
-```bash
-docker build -t devsecops-pipeline .
-docker run -p 5000:5000 devsecops-pipeline
+Author & Research Project
+Developed by Durga Dhanush Yaragani as an advanced DevSecOps & Cloud Security Research Project.

@@ -1,0 +1,25 @@
+# Trivy Configuration for DevSecOps Pipeline
+scan:
+  vulnerability-type:
+    - os
+    - library
+  scanners:
+    - vuln
+    - secret
+    - config
+
+severity:
+  - HIGH
+  - CRITICAL
+
+exit-code: 0  # Set to 1 in strict Zero-Trust mode to block pipeline on critical vulnerabilities
+ignore-unfixed: true
+
+format: table
+output: reports/trivy-report.txt
+
+cache:
+  dir: .trivycache/
+
+vulnerability:
+  ignore-policy: ""
