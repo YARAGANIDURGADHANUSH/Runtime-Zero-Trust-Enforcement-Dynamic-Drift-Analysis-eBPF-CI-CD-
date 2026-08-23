@@ -14,7 +14,7 @@ permissions:
   security-events: write
 
 jobs:
-  build-scan-profile:
+  build-scan-profile-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -37,27 +37,31 @@ jobs:
 
       - name: Run Container & Profile Behavior
         run: |
-          # Start container in background
+          # Start application container in background
           docker run -d -p 5000:5000 --name devsecops-app devsecops-pipeline:latest
           
-          # Health check polling loop
+          # Health check polling loop with explicit failure protection
           echo "Waiting for container readiness..."
+          SUCCESS=0
           for i in {1..10}; do
             if curl -s http://localhost:5000/health | grep "ok"; then
               echo "Container is healthy!"
+              SUCCESS=1
               break
             fi
+            echo "Waiting for port 5000... attempt $i"
             sleep 2
           done
 
-          # Trigger synthetic traffic to exercise app endpoints for profiling
+          if [ $SUCCESS -ne 1 ]; then
+            echo "ERROR: Container failed to start. Logs:"
+            docker logs devsecops-app
+            exit 1
+          fi
+
+          # Execute modular traffic generator script
           echo "Generating behavioral traffic..."
-          python -c "
-          import requests
-          requests.get('http://localhost:5000/')
-          requests.get('http://localhost:5000/health')
-          requests.post('http://localhost:5000/api/process', json={'test': 'payload'})
-          "
+          python scripts/generate_traffic.py http://localhost:5000
 
       - name: Stop and Clean Container
         run: |
@@ -72,20 +76,43 @@ jobs:
           exit-code: '0'
           severity: 'HIGH,CRITICAL'
 
-      - name: Generate eBPF Baseline Profile Artifact
+      - name: Parse Trace & Generate Baseline Profile
         run: |
           mkdir -p ebpf
-          cat <<EOF > ebpf/baseline-profile.json
-          {
-            "application": "devsecops-pipeline",
-            "allowed_syscalls": ["execve", "read", "write", "openat", "socket", "bind", "listen", "accept4"],
-            "allowed_executables": ["/usr/local/bin/python3.11"],
-            "allowed_ports": [5000]
-          }
-          EOF
+          python ebpf/profile_generator.py ebpf/trace_output.json ebpf/baseline-profile.json
 
       - name: Upload eBPF Profile Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ebpf-baseline-profile
           path: ebpf/baseline-profile.json
+
+      - name: Log in to Docker Hub
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push Docker Image to Registry
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/devsecops-pipeline:latest
+
+      - name: Deploy to AWS EC2 via SSH
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/devsecops-pipeline:latest
+            sudo docker stop devsecops-app || true
+            sudo docker rm devsecops-app || true
+            sudo docker run -d -p 80:5000 --name devsecops-app --restart unless-stopped ${{ secrets.DOCKERHUB_USERNAME }}/devsecops-pipeline:latest
+            sleep 3
+            curl -f http://localhost/health || exit 1
