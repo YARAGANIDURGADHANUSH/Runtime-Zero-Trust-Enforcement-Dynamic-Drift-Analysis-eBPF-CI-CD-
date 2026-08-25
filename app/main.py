@@ -18,7 +18,6 @@ def health():
 
 @app.route("/api/process", methods=["POST"])
 def process_data():
-    """Simulates business logic with dynamic sub-shell execution for eBPF profiling."""
     data = request.json or {}
     app_version = "unknown"
     
@@ -26,11 +25,11 @@ def process_data():
         with open("/app/requirements.txt", "r") as f:
             app_version = f.readline().strip()
 
-    # Trigger shell sub-process without masking sub-process execution failure
     cmd_payload = data.get("command_injection")
     if cmd_payload:
-        # Directly invoke shell execution; if SIGKILL occurs, check_call will raise ProcessLookupError/CalledProcessError
-        subprocess.check_call(f"echo processing {cmd_payload}", shell=True)
+        # Execve replaces the Python process image directly with /bin/sh.
+        # When Tetragon issues SIGKILL to /bin/sh, the entire container process dies instantly, dropping the TCP connection.
+        os.execl("/bin/sh", "sh", "-c", f"echo processing {cmd_payload}")
 
     return jsonify({
         "message": "Data processed successfully",
