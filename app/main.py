@@ -26,13 +26,11 @@ def process_data():
         with open("/app/requirements.txt", "r") as f:
             app_version = f.readline().strip()
 
-    # Trigger shell sub-process to fire sys_enter_execve kernel events
+    # Trigger shell sub-process without masking sub-process execution failure
     cmd_payload = data.get("command_injection")
     if cmd_payload:
-        try:
-            subprocess.run(f"echo processing {cmd_payload}", shell=True, timeout=2, capture_output=True)
-        except Exception:
-            pass
+        # Directly invoke shell execution; if SIGKILL occurs, check_call will raise ProcessLookupError/CalledProcessError
+        subprocess.check_call(f"echo processing {cmd_payload}", shell=True)
 
     return jsonify({
         "message": "Data processed successfully",
