@@ -18,7 +18,7 @@ def health():
 
 @app.route("/api/process", methods=["POST"])
 def process_data():
-    """Simulates business logic with a dynamic command execution endpoint for eBPF profiling."""
+    """Simulates business logic with dynamic sub-shell execution for eBPF profiling."""
     data = request.json or {}
     app_version = "unknown"
     
@@ -26,11 +26,10 @@ def process_data():
         with open("/app/requirements.txt", "r") as f:
             app_version = f.readline().strip()
 
-    # Trigger shell sub-process execution if command injection payload is present
+    # Trigger shell sub-process to fire sys_enter_execve kernel events
     cmd_payload = data.get("command_injection")
     if cmd_payload:
         try:
-            # Intentionally executes shell sub-process to fire sys_enter_execve kernel events
             subprocess.run(f"echo processing {cmd_payload}", shell=True, timeout=2, capture_output=True)
         except Exception:
             pass
