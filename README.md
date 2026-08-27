@@ -51,7 +51,7 @@ Runtime-Zero-Trust-Enforcement-Dynamic-Drift-Analysis-eBPF-CI-CD-/
 ```
 
 ## Experimental Workflow
-* ** 1. Run CI/CD Profiling Locally
+* **1. Run CI/CD Profiling Locally
 * Build the application image
 ```Bash
 docker build -t devsecops-pipeline:latest .
@@ -65,7 +65,7 @@ python scripts/generate_traffic.py http://localhost:5000
 python ebpf/profile_generator.py ebpf/trace_output.json ebpf/baseline-profile.json
 ```
 
-* ** 2. Execute RCE / Drift Simulation
+* **2. Execute RCE / Drift Simulation
 * To test eBPF kernel enforcement against unauthorized syscall attempts (/bin/sh execution or credential extraction):
 ```Bash
 python security/exploits/rce_simulation.py http://<EC2-PUBLIC-IP>/api/process
