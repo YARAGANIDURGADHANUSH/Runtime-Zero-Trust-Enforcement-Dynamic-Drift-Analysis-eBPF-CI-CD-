@@ -48,6 +48,8 @@ Runtime-Zero-Trust-Enforcement-Dynamic-Drift-Analysis-eBPF-CI-CD-/
 │   ├── generate_traffic.py          # Synthetic load suite for CI profiling
 │   └── deploy_ec2.sh                # Automated SSH/CD script for AWS EC2
 └── Dockerfile                       # Multi-stage non-root container configuration
+```
+
 Experimental Workflow
 1. Run CI/CD Profiling Locally
 Bash
@@ -71,5 +73,5 @@ Security & Tracing: Cilium Tetragon, eBPF, Aqua Security Trivy
 
 CI/CD & Cloud Infrastructure: GitHub Actions, Docker Hub, AWS EC2 (Ubuntu 24.04 LTS)
 
-Author & Research Project
+## Author & Research Project
 Developed by Durga Dhanush Yaragani as an advanced DevSecOps & Cloud Security Research Project.
