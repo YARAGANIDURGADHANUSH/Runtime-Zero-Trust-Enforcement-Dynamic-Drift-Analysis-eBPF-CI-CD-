@@ -13,12 +13,9 @@ This research project introduces a closed-loop DevSecOps architecture that combi
 ```text
 [ GitHub Actions CI ] ──(Generates Trace)──> [ Profile Generator ]
 │
-│
 (Least-Privilege JSON)
 │
-│
 [ AWS EC2 Deployment ] <──(Enforces Rule)─── [ Tetragon eBPF Engine ]
-│
 │
 └──(RCE / Anomaly Attempt) ──> [ Instant Kernel SIGKILL ]
 ```
@@ -53,7 +50,7 @@ Runtime-Zero-Trust-Enforcement-Dynamic-Drift-Analysis-eBPF-CI-CD-/
 └── Dockerfile                       # Multi-stage non-root container configuration
 ```
 
-Experimental Workflow
+## Experimental Workflow
 1. Run CI/CD Profiling Locally
 Bash
 # Build the application image
@@ -76,5 +73,5 @@ Security & Tracing: Cilium Tetragon, eBPF, Aqua Security Trivy
 
 CI/CD & Cloud Infrastructure: GitHub Actions, Docker Hub, AWS EC2 (Ubuntu 24.04 LTS)
 
-## Author & Research Project
+# Author & Research Project
 Developed by Durga Dhanush Yaragani as an advanced DevSecOps & Cloud Security Research Project.
