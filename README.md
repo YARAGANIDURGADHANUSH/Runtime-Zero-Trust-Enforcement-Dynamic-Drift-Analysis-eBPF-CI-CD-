@@ -52,33 +52,32 @@ Runtime-Zero-Trust-Enforcement-Dynamic-Drift-Analysis-eBPF-CI-CD-/
 
 ## Experimental Workflow
 * ** 1. Run CI/CD Profiling Locally
-Bash
-Build the application image
-```text
+* Build the application image
+```Bash
 docker build -t devsecops-pipeline:latest .
 ```
-Generate behavioral traffic
-```text
+* Generate behavioral traffic
+```Bash
 python scripts/generate_traffic.py http://localhost:5000
 ```
-Parse trace logs and output baseline profile
-```text
+* Parse trace logs and output baseline profile
+```Bash
 python ebpf/profile_generator.py ebpf/trace_output.json ebpf/baseline-profile.json
 ```
 
 * ** 2. Execute RCE / Drift Simulation
-To test eBPF kernel enforcement against unauthorized syscall attempts (/bin/sh execution or credential extraction):
-
-Bash
-```
+* To test eBPF kernel enforcement against unauthorized syscall attempts (/bin/sh execution or credential extraction):
+```Bash
 python security/exploits/rce_simulation.py http://<EC2-PUBLIC-IP>/api/process
 ```
-Tech Stack
+* Tech Stack
+```text
 Language & Framework: Python 3.11, Flask
 
 Security & Tracing: Cilium Tetragon, eBPF, Aqua Security Trivy
 
 CI/CD & Cloud Infrastructure: GitHub Actions, Docker Hub, AWS EC2 (Ubuntu 24.04 LTS)
+```
 
 # Author & Research Project
 Developed by Durga Dhanush Yaragani as an advanced DevSecOps & Cloud Security Research Project.
