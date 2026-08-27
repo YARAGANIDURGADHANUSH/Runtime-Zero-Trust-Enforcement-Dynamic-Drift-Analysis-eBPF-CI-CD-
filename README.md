@@ -10,15 +10,18 @@ This research project introduces a closed-loop DevSecOps architecture that combi
 ---
 
 ## Key Architecture & Features
-
+```text
 [ GitHub Actions CI ] ──(Generates Trace)──> [ Profile Generator ]
+│
 │
 (Least-Privilege JSON)
 │
+│
 [ AWS EC2 Deployment ] <──(Enforces Rule)─── [ Tetragon eBPF Engine ]
 │
+│
 └──(RCE / Anomaly Attempt) ──> [ Instant Kernel SIGKILL ]
-
+```
 
 * **Automated Behavioral Profiling**: Dynamic traffic generation during CI captures exact binary execution, network port bindings, and system call baselines (`accept4`, `bind`, `execve`, `openat`).
 * **Static & Supply-Chain Scanning**: Centralized Trivy configuration checking for OS and application-level `HIGH` / `CRITICAL` vulnerabilities.
